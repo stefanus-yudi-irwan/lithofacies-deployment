@@ -1,0 +1,22 @@
+name: facies_classification
+services:
+  streamlit:
+    build: docker/streamlit
+    image: yudistefanus22docker/ml_process_streamlit
+    container_name: streamlit_frontend
+    depends_on:
+      - api
+    ports:
+      - 8501:8501
+    volumes:
+      - ./:/home/
+
+  api:
+    build: docker/api
+    image: yudistefanus22docker/ml_process_api
+    container_name: api_backend
+    ports:
+      - 8080:8080
+    volumes:
+      - ./:/home/
+

@@ -1,0 +1,73 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  docker-compose-build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        lfs: True
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{secrets.DOCKER_HUB_USER}}
+        password: ${{secrets.DOCKER_HUB_TOKEN}}
+
+    - name: Docker Compose Build and Push
+      run: |
+        docker compose build --no-cache
+        docker compose push
+  
+  docker-pull-ec2:
+    needs: docker-compose-build
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Creating SSH Configuration File
+      env:
+        SSH_USER: ${{secrets.SSH_USER}}
+        SSH_KEY: ${{secrets.SSH_KEY}}
+        SSH_HOST: ${{secrets.SSH_HOST}}
+        DOCKER_USER: ${{secrets.DOCKER_HUB_USER}}
+      run: |
+        mkdir -p ~/.ssh/
+        echo "$SSH_KEY" > ~/.ssh/facies_classification.pem
+        chmod 600 ~/.ssh/facies_classification.pem
+        cat >> ~/.ssh/config <<END
+        Host deploy_ec2
+          HostName $SSH_HOST
+          User $SSH_USER
+          IdentityFile ~/.ssh/facies_classification.pem
+          StrictHostKeyChecking no
+        END
+        
+    - name: Deploy to EC2
+      run: |
+        ssh deploy_ec2 "mkdir temp/"
+        ssh deploy_ec2 "git clone git@github.com:StefanusYudi22/Facies_Classification_Deployment.git temp/"
+        ssh deploy_ec2 "rsync -a ./temp/ ./facies_classification/"
+        ssh deploy_ec2 "rm -rf temp/"
+        ssh deploy_ec2 "cd facies_classification/ && sudo docker compose rm -sf api && sudo docker compose rm -sf streamlit"
+        ssh deploy_ec2 "cd facies_classification/ || sudo docker rmi -f yudistefanus22docker/ml_process_api || sudo docker rmi -f yudistefanus22docker/ml_process_streamlit"
+        ssh deploy_ec2 "cd facies_classification/ && sudo docker compose pull"
+        ssh deploy_ec2 "cd facies_classification/ && sudo docker compose up -d"

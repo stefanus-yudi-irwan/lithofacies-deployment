@@ -1,0 +1,29 @@
+# Path Configuration
+# data directory and path
+raw_dataset_dir : data/raw/
+raw_data_path : data/processed/raw_data.pkl
+data_train_path :
+- data/processed/X_train_clean.pkl
+- data/processed/y_train_clean.pkl
+data_test_path :
+- data/processed/X_test_clean.pkl
+- data/processed/y_test_clean.pkl
+data_modeling_path :
+- data/processed/train_data_modeling.pkl
+- data/processed/test_data_modeling.pkl
+
+
+# model path
+ohe_train_path : models/ohe_train.pkl
+standard_scaler_path : models/standard_scaler_train.pkl
+modeling_summary : models/modeling_summary.pkl
+production_model : models/production_model.pkl
+
+# label for api data
+api_columns:
+- GR
+- ILD_log10
+- DeltaPHI
+- PHIND
+- PE
+- NM_M
